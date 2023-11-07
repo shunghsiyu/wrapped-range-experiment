@@ -77,6 +77,10 @@ def main():
     prove(
         w1.umax == BitVecVal64(1),
     )
+    print('\nProving that w1 contains 1')
+    prove(
+        w1.contains(BitVecVal64(1)),
+    )
 
     w2 = Wrange('w2', start=BitVecVal64(2), length=BitVecVal64(2**64 - 3))
     print(f'\nGiven w2 start={w2.start} length={w2.length}')
@@ -91,6 +95,14 @@ def main():
     print('\nProving w2.umax is 2**64-1')
     prove(
         w2.umax == BitVecVal64(2**64 - 1),
+    )
+    print('\nProving that w2 contains 2**63 - 1')
+    prove(
+        w2.contains(BitVecVal64(2**63 - 1)),
+    )
+    print('\nProving that w2 does NOT contains 1')
+    prove(
+        Not(w2.contains(BitVecVal64(1))),
     )
 
     w3 = Wrange('w3', start=BitVecVal64(2), length=BitVecVal64(2**64 - 2))
