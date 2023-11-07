@@ -5,11 +5,11 @@ from z3 import *
 
 
 # Helpers
-BitVec64 = lambda n: BitVec(n, bv=64)
-BitVecVal64 = lambda v: BitVecVal(v, bv=64)
+BitVec32 = lambda n: BitVec(n, bv=32)
+BitVecVal32 = lambda v: BitVecVal(v, bv=32)
 
 class Wrange:
-    SIZE = 64 # Working with 64-bit integers
+    SIZE = 32 # Working with 32-bit integers
     name: str
     start: BitVecRef
     length: BitVecRef
@@ -42,6 +42,7 @@ class Wrange:
 
     @property
     def uwrapping(self):
+        # unsigned comparison, (u32) end < (u32) start
         return ULT(self.end, self.start)
 
     @property
@@ -55,6 +56,7 @@ class Wrange:
 
     @property
     def swrapping(self):
+        # signed comparison, (s32) end < (s32) start
         return self.end < self.start
 
     @property
@@ -69,7 +71,7 @@ class Wrange:
         assert(val.size() == self.SIZE)
         # start <= val <= end
         nonwrapping_cond = And(ULE(self.start, val), ULE(val, self.end))
-        # 0 <= val <= end or start <= val <= 2**64-1
+        # 0 <= val <= end or start <= val <= 2**32-1
         wrapping_cond = Or(
                 And(ULE(BitVecVal(0, bv=self.SIZE), val), ULE(val, self.end)),
                 And(ULE(self.start, val), ULE(val, BitVecVal(2**self.SIZE - 1, bv=self.SIZE)))
@@ -79,14 +81,14 @@ class Wrange:
 
 __all__ = [
         'Wrange',
-        'BitVec64',
-        'BitVecVal64',
+        'BitVec32',
+        'BitVecVal32',
 ]
 
 
 def main():
-    x = BitVec64('x') # Any possible 64-bit integer x
-    w1 = Wrange('w1', start=BitVecVal64(1), length=BitVecVal64(0))
+    x = BitVec32('x') # Any possible 32-bit integer x
+    w1 = Wrange('w1', start=BitVecVal32(1), length=BitVecVal32(0))
     print(f'Given w1 start={w1.start} length={w1.length}')
     print('\nProving w1 is wellformed')
     prove(
@@ -94,30 +96,30 @@ def main():
     )
     print('\nProving w1.umin is 1')
     prove(
-        w1.umin == BitVecVal64(1),
+        w1.umin == BitVecVal32(1),
     )
     print('\nProving w1.umax is 1')
     prove(
-        w1.umax == BitVecVal64(1),
+        w1.umax == BitVecVal32(1),
     )
     print('\nProving w1.smin is 1')
     prove(
-        w1.smin == BitVecVal64(1),
+        w1.smin == BitVecVal32(1),
     )
     print('\nProving w1.smax is 1')
     prove(
-        w1.smax == BitVecVal64(1),
+        w1.smax == BitVecVal32(1),
     )
     print('\nProving that w1 contains 1')
     prove(
-        w1.contains(BitVecVal64(1)),
+        w1.contains(BitVecVal32(1)),
     )
     print('\nProving that w1 is a set of {1}')
     prove(
-        w1.contains(x) == (x == BitVecVal64(1)),
+        w1.contains(x) == (x == BitVecVal32(1)),
     )
 
-    w2 = Wrange('w2', start=BitVecVal64(2), length=BitVecVal64(2**64 - 3))
+    w2 = Wrange('w2', start=BitVecVal32(2), length=BitVecVal32(2**32 - 3))
     print(f'\nGiven w2 start={w2.start} length={w2.length}')
     print('\nProving w2 is wellformed')
     prove(
@@ -125,34 +127,34 @@ def main():
     )
     print('\nProving w2.umin is 2')
     prove(
-        w2.umin == BitVecVal64(2),
+        w2.umin == BitVecVal32(2),
     )
-    print('\nProving w2.umax is 2**64-1')
+    print('\nProving w2.umax is 2**32-1')
     prove(
-        w2.umax == BitVecVal64(2**64 - 1),
+        w2.umax == BitVecVal32(2**32 - 1),
     )
-    print('\nProving w2.smin is -9223372036854775808/0x8000000000000000')
+    print('\nProving w2.smin is -2147483648/0x80000000')
     prove(
-        w2.smin == BitVecVal64(0x8000000000000000),
+        w2.smin == BitVecVal32(0x80000000),
     )
-    print('\nProving w2.smax is 9223372036854775807/0x7fffffffffffffff')
+    print('\nProving w2.smax is 2147483647/0x7fffffff')
     prove(
-        w2.smax == BitVecVal64(0x7fffffffffffffff),
+        w2.smax == BitVecVal32(0x7fffffff),
     )
     print('\nProving that w2 contains 2**63 - 1')
     prove(
-        w2.contains(BitVecVal64(2**63 - 1)),
+        w2.contains(BitVecVal32(2**63 - 1)),
     )
     print('\nProving that w2 does NOT contains 1')
     prove(
-        Not(w2.contains(BitVecVal64(1))),
+        Not(w2.contains(BitVecVal32(1))),
     )
-    print('\nProving that w2 is a set of {2..2**64-1}')
+    print('\nProving that w2 is a set of {2..2**32-1}')
     prove(
-        w2.contains(x) == And(ULE(BitVecVal64(2), x), ULE(x, BitVecVal64(2**64-1))),
+        w2.contains(x) == And(ULE(BitVecVal32(2), x), ULE(x, BitVecVal32(2**32-1))),
     )
 
-    w3 = Wrange('w3', start=BitVecVal64(2), length=BitVecVal64(2**64 - 2))
+    w3 = Wrange('w3', start=BitVecVal32(2), length=BitVecVal32(2**32 - 2))
     print(f'\nGiven w3 start={w3.start} length={w3.length}')
     print('\nProving w3 is also wellformed')
     prove(
@@ -160,34 +162,34 @@ def main():
     )
     print('\nProving w3.umin is 0')
     prove(
-        w3.umin == BitVecVal64(0),
+        w3.umin == BitVecVal32(0),
     )
-    print('\nProving w3.umax is 2**64-1')
+    print('\nProving w3.umax is 2**32-1')
     prove(
-        w3.umax == BitVecVal64(2**64 - 1),
+        w3.umax == BitVecVal32(2**32 - 1),
     )
-    print('\nProving w3.smin is -9223372036854775808/0x8000000000000000')
+    print('\nProving w3.smin is -2147483648/0x80000000')
     prove(
-        w3.smin == BitVecVal64(0x8000000000000000),
+        w3.smin == BitVecVal32(0x80000000),
     )
-    print('\nProving w3.smax is 9223372036854775807/0x7fffffffffffffff')
+    print('\nProving w3.smax is 2147483647/0x7fffffff')
     prove(
-        w3.smax == BitVecVal64(0x7fffffffffffffff),
+        w3.smax == BitVecVal32(0x7fffffff),
     )
     print('\nProving that w3 contains 0')
     prove(
-        w3.contains(BitVecVal64(0)),
+        w3.contains(BitVecVal32(0)),
     )
     print('\nProving that w3 does NOT contain 1')
     prove(
-        Not(w3.contains(BitVecVal64(1))),
+        Not(w3.contains(BitVecVal32(1))),
     )
-    print('\nProving that w3 is a union set of ({0} U {2..2**64-1})')
+    print('\nProving that w3 is a union set of ({0} U {2..2**32-1})')
     prove(
-        w3.contains(x) == Or(x == BitVecVal64(0), And(ULE(2, x), ULE(x, 2**64-1))),
+        w3.contains(x) == Or(x == BitVecVal32(0), And(ULE(2, x), ULE(x, 2**32-1))),
     )
 
-    w4 = Wrange('w4', start=BitVecVal64(2**64 - 1), length=BitVecVal64(2))
+    w4 = Wrange('w4', start=BitVecVal32(2**32 - 1), length=BitVecVal32(2))
     print(f'\nGiven w4 start={w4.start} length={w4.length}')
     print('\nProving w4 is also wellformed')
     prove(
@@ -195,36 +197,36 @@ def main():
     )
     print('\nProving w4.umin is 0')
     prove(
-        w4.umin == BitVecVal64(0),
+        w4.umin == BitVecVal32(0),
     )
-    print('\nProving w4.umax is 2**64-1')
+    print('\nProving w4.umax is 2**32-1')
     prove(
-        w4.umax == BitVecVal64(2**64 - 1),
+        w4.umax == BitVecVal32(2**32 - 1),
     )
     print('\nProving w4.smin is -1')
     prove(
-        w4.smin == BitVecVal64(-1),
+        w4.smin == BitVecVal32(-1),
     )
     print('\nProving w4.smax is 1')
     prove(
-        w4.smax == BitVecVal64(1),
+        w4.smax == BitVecVal32(1),
     )
     print('\nProving that w4 contains 0')
     prove(
-        w4.contains(BitVecVal64(0)),
+        w4.contains(BitVecVal32(0)),
     )
-    print('\nProving that w4 does contain 2**64-1')
+    print('\nProving that w4 does contain 2**32-1')
     prove(
-        w4.contains(BitVecVal64(2**64-1)),
+        w4.contains(BitVecVal32(2**32-1)),
     )
-    print('\nProving that w4 is a union set of ({2**64-1} U {0..1})')
+    print('\nProving that w4 is a union set of ({2**32-1} U {0..1})')
     prove(
-        w4.contains(x) == Or(x == BitVecVal64(2**64-1), x == BitVecVal64(0), x == BitVecVal64(1)),
+        w4.contains(x) == Or(x == BitVecVal32(2**32-1), x == BitVecVal32(0), x == BitVecVal32(1)),
     )
 
     w = Wrange('w') # Given a Wrange called w
-    x = BitVec64('x') # And an 64-bit integer x
-    print(f'\nGiven any possible Wrange called w, and any possible 64-bit integer called x')
+    x = BitVec32('x') # And an 32-bit integer x
+    print(f'\nGiven any possible Wrange called w, and any possible 32-bit integer called x')
     print('\nProving if w.contains(x) == True, then w.umin <= x')
     prove(
         Implies(
