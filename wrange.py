@@ -42,8 +42,7 @@ class Wrange:
 
     @property
     def uwrapping(self):
-        wrapping_cond = ULT(self.end, self.start)
-        return wrapping_cond
+        return ULT(self.end, self.start)
 
     @property
     def umin(self):
@@ -53,6 +52,18 @@ class Wrange:
     def umax(self):
         end = self.start + self.length
         return If(self.uwrapping, BitVecVal(2**self.SIZE - 1, bv=self.SIZE), self.end)
+
+    @property
+    def swrapping(self):
+        return self.end < self.start
+
+    @property
+    def smin(self):
+        return If(self.swrapping, BitVecVal(1 << (self.SIZE - 1), bv=self.SIZE), self.start)
+
+    @property
+    def smax(self):
+        return If(self.swrapping, BitVecVal((2**self.SIZE - 1) >> 1, bv=self.SIZE), self.end)
 
     def contains(self, val: BitVecRef):
         assert(val.size() == self.SIZE)
@@ -89,6 +100,14 @@ def main():
     prove(
         w1.umax == BitVecVal64(1),
     )
+    print('\nProving w1.smin is 1')
+    prove(
+        w1.smin == BitVecVal64(1),
+    )
+    print('\nProving w1.smax is 1')
+    prove(
+        w1.smax == BitVecVal64(1),
+    )
     print('\nProving that w1 contains 1')
     prove(
         w1.contains(BitVecVal64(1)),
@@ -111,6 +130,14 @@ def main():
     print('\nProving w2.umax is 2**64-1')
     prove(
         w2.umax == BitVecVal64(2**64 - 1),
+    )
+    print('\nProving w2.smin is -9223372036854775808/0x8000000000000000')
+    prove(
+        w2.smin == BitVecVal64(0x8000000000000000),
+    )
+    print('\nProving w2.smax is 9223372036854775807/0x7fffffffffffffff')
+    prove(
+        w2.smax == BitVecVal64(0x7fffffffffffffff),
     )
     print('\nProving that w2 contains 2**63 - 1')
     prove(
@@ -139,6 +166,14 @@ def main():
     prove(
         w3.umax == BitVecVal64(2**64 - 1),
     )
+    print('\nProving w3.smin is -9223372036854775808/0x8000000000000000')
+    prove(
+        w3.smin == BitVecVal64(0x8000000000000000),
+    )
+    print('\nProving w3.smax is 9223372036854775807/0x7fffffffffffffff')
+    prove(
+        w3.smax == BitVecVal64(0x7fffffffffffffff),
+    )
     print('\nProving that w3 contains 0')
     prove(
         w3.contains(BitVecVal64(0)),
@@ -165,6 +200,14 @@ def main():
     print('\nProving w4.umax is 2**64-1')
     prove(
         w4.umax == BitVecVal64(2**64 - 1),
+    )
+    print('\nProving w4.smin is -1')
+    prove(
+        w4.smin == BitVecVal64(-1),
+    )
+    print('\nProving w4.smax is 1')
+    prove(
+        w4.smax == BitVecVal64(1),
     )
     print('\nProving that w4 contains 0')
     prove(
