@@ -63,6 +63,7 @@ __all__ = [
 
 
 def main():
+    x = BitVec64('x') # Any possible 64-bit integer x
     w1 = Wrange('w1', start=BitVecVal64(1), length=BitVecVal64(0))
     print(f'Given w1 start={w1.start} length={w1.length}')
     print('\nProving w1 is wellformed')
@@ -80,6 +81,10 @@ def main():
     print('\nProving that w1 contains 1')
     prove(
         w1.contains(BitVecVal64(1)),
+    )
+    print('\nProving that w1 is a set of {1}')
+    prove(
+        w1.contains(x) == (x == BitVecVal64(1)),
     )
 
     w2 = Wrange('w2', start=BitVecVal64(2), length=BitVecVal64(2**64 - 3))
@@ -104,6 +109,11 @@ def main():
     prove(
         Not(w2.contains(BitVecVal64(1))),
     )
+    print('\nProving that w2 is a set of {2..2**64-1}')
+    prove(
+        w2.contains(x) == And(ULE(BitVecVal64(2), x), ULE(x, BitVecVal64(2**64-1))),
+    )
+
 
     w3 = Wrange('w3', start=BitVecVal64(2), length=BitVecVal64(2**64 - 2))
     print(f'\nGiven w3 start={w3.start} length={w3.length}')
