@@ -30,8 +30,8 @@ class Wrange:
         print(f'{name}(start={start}/{hex(start)},\n{pad}length={length}/{hex(length)},\n{pad}end={end}/{hex(end)})')
 
     def wellformed(self):
-        # start <= end
-        return ULE(self.start, self.end)
+        # allow end < start
+        return BoolVal(True)
 
     def reset(self):
         return And(self.start == BitVecVal(0, bv=self.SIZE), self.length == BitVecVal(-1, bv=self.SIZE))
@@ -41,18 +41,29 @@ class Wrange:
         return self.start + self.length
 
     @property
+    def uwrapping(self):
+        wrapping_cond = ULT(self.end, self.start)
+        return wrapping_cond
+
+    @property
     def umin(self):
-        return self.start
+        return If(self.uwrapping, BitVecVal(0, bv=self.SIZE), self.start)
 
     @property
     def umax(self):
         end = self.start + self.length
-        return end
+        return If(self.uwrapping, BitVecVal(2**self.SIZE - 1, bv=self.SIZE), self.end)
 
     def contains(self, val: BitVecRef):
         assert(val.size() == self.SIZE)
-        # umin <= val <= umax
-        return And(ULE(self.umin, val), ULE(val, self.umax))
+        # start <= val <= end
+        nonwrapping_cond = And(ULE(self.start, val), ULE(val, self.end))
+        # 0 <= val <= end or start <= val <= 2**64-1
+        wrapping_cond = Or(
+                And(ULE(BitVecVal(0, bv=self.SIZE), val), ULE(val, self.end)),
+                And(ULE(self.start, val), ULE(val, BitVecVal(2**self.SIZE - 1, bv=self.SIZE)))
+        )
+        return If(self.uwrapping, wrapping_cond, nonwrapping_cond)
 
 
 __all__ = [
@@ -114,12 +125,58 @@ def main():
         w2.contains(x) == And(ULE(BitVecVal64(2), x), ULE(x, BitVecVal64(2**64-1))),
     )
 
-
     w3 = Wrange('w3', start=BitVecVal64(2), length=BitVecVal64(2**64 - 2))
     print(f'\nGiven w3 start={w3.start} length={w3.length}')
-    print('\nProving w3 is NOT wellformed')
+    print('\nProving w3 is also wellformed')
     prove(
-        Not(w3.wellformed()),
+        w3.wellformed(),
+    )
+    print('\nProving w3.umin is 0')
+    prove(
+        w3.umin == BitVecVal64(0),
+    )
+    print('\nProving w3.umax is 2**64-1')
+    prove(
+        w3.umax == BitVecVal64(2**64 - 1),
+    )
+    print('\nProving that w3 contains 0')
+    prove(
+        w3.contains(BitVecVal64(0)),
+    )
+    print('\nProving that w3 does NOT contain 1')
+    prove(
+        Not(w3.contains(BitVecVal64(1))),
+    )
+    print('\nProving that w3 is a union set of ({0} U {2..2**64-1})')
+    prove(
+        w3.contains(x) == Or(x == BitVecVal64(0), And(ULE(2, x), ULE(x, 2**64-1))),
+    )
+
+    w4 = Wrange('w4', start=BitVecVal64(2**64 - 1), length=BitVecVal64(2))
+    print(f'\nGiven w4 start={w4.start} length={w4.length}')
+    print('\nProving w4 is also wellformed')
+    prove(
+        w4.wellformed(),
+    )
+    print('\nProving w4.umin is 0')
+    prove(
+        w4.umin == BitVecVal64(0),
+    )
+    print('\nProving w4.umax is 2**64-1')
+    prove(
+        w4.umax == BitVecVal64(2**64 - 1),
+    )
+    print('\nProving that w4 contains 0')
+    prove(
+        w4.contains(BitVecVal64(0)),
+    )
+    print('\nProving that w4 does contain 2**64-1')
+    prove(
+        w4.contains(BitVecVal64(2**64-1)),
+    )
+    print('\nProving that w4 is a union set of ({2**64-1} U {0..1})')
+    prove(
+        w4.contains(x) == Or(x == BitVecVal64(2**64-1), x == BitVecVal64(0), x == BitVecVal64(1)),
     )
 
     w = Wrange('w') # Given a Wrange called w
